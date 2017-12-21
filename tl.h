@@ -1,9 +1,13 @@
-#include <glib.h>
+
+typedef struct _tl_list {
+    void *data;
+    struct _tl_list *next;
+} tl_list;
 
 typedef struct _tl_type {
     char *name;
     int modifiers;
-    GList *t_args; 
+    tl_list *t_args; 
 } tl_type;
 
 #define TYPE_MOD_NONE 0
@@ -26,4 +30,5 @@ typedef struct _tl_cond {
     char *name;
     int bitmask;
 } tl_cond;
+
 

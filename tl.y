@@ -7,14 +7,11 @@
 
 extern int yydebug;
 
+int yywrap() { return 1; }
+
 void yyerror( const char *estr )
 {
     fprintf( stderr, "parser error: %s\n", estr );
-}
-
-int yywrap()
-{
-    return 1;
 }
 
 int main(int argc, char *argv[])
@@ -49,7 +46,7 @@ static tl_type *tl_type_new( char *name, int modifiers )
     return res;
 }
 
-static tl_type *tl_type_new_template( char *name, GList *targs )
+static tl_type *tl_type_new_template( char *name, tl_list *targs )
 {
     tl_type *res = tl_type_new( name, TYPE_MOD_TEMPLATE );
     res->t_args = targs;
@@ -89,7 +86,7 @@ static tl_cond *tl_cond_new( char *name, int bitmask )
     return cond;
 }
 
-static void tl_type_gen( char *constr, int hash, tl_type *type, GList *args )
+static void tl_type_gen( char *constr, int hash, tl_type *type, tl_list *args )
 {
     printf( "TYPE %s constr %s(%08x) { ", type->name, constr, hash );
     for(; args; args = args->next){
@@ -97,6 +94,33 @@ static void tl_type_gen( char *constr, int hash, tl_type *type, GList *args )
         printf( "%s: %s, ", arg->name, arg->type->name );
     }
     printf("}\n");
+}
+
+static void tl_func_gen( char *name, int hash, tl_type *res, tl_list *args )
+{
+    printf( "FUNC %s %s(%08x) { ", res->name, name, hash );
+    for(; args; args = args->next){
+        tl_arg *arg = args->data;
+        printf( "%s: %s, ", arg->name, arg->type->name );
+    }
+    printf("}\n");
+}
+
+static tl_list *tl_list_append( tl_list *head, void *item )
+{
+    tl_list *new_elem = malloc(sizeof(tl_list));
+    new_elem->data = item;
+    new_elem->next = NULL;
+    if (head == NULL)
+        return new_elem;
+
+    tl_list *list = head;
+    while( list->next )
+        list = list->next;
+    
+    list->next = new_elem;
+
+    return head;
 }
 
 %}
@@ -107,10 +131,10 @@ static void tl_type_gen( char *constr, int hash, tl_type *type, GList *args )
 %union {
     int number;
     char *string;
-    GList *list;
     tl_arg *arg;
     tl_type *type;
     tl_cond *cond;
+    tl_list *list;
 }
 
 %token <number> NUM
@@ -122,9 +146,9 @@ static void tl_type_gen( char *constr, int hash, tl_type *type, GList *args )
 %type <string> full-id
 %type <number> opt-hash
 %type <string> type-id
+%type <list> tpar-list
 %type <type> type-term
 %type <type> result-type
-%type <list> tpar-list
 %type <list> args
 %type <arg> arg
 %type <cond> condition
@@ -141,8 +165,8 @@ type-term:  type-id { $$ = tl_type_new( $1, TYPE_MOD_NONE ); }
         | type-id '<' tpar-list '>' { $$ = tl_type_new_template( $1, $3 ); }
         ;    
 
-tpar-list: type-id { $$ = g_list_append( NULL, $1 ); }
-        | tpar-list ',' type-id { $$ = g_list_append( $1, $3 ); }
+tpar-list: type-id { $$ = tl_list_append( NULL, $1 ); }
+        | tpar-list ',' type-id { $$ = tl_list_append( $1, $3 ); }
         ;
 
 type-id: full-id | '#' { $$ = strdup("nat"); } ;
@@ -189,6 +213,8 @@ combinator: full-id opt-hash opt-args args '=' result-type ';'
         {
             if (tl_context == TL_TYPES)
                 tl_type_gen( $1, $2, $6, $4 );
+            else
+                tl_func_gen( $1, $2, $6, $4 );
         }
         ;
 
@@ -201,7 +227,7 @@ opt-args: /* empty */
         ;
 
 args: /* empty */ { $$ = NULL; }
-    | args arg { $$ = g_list_append( $1, $2 ); }
+    | args arg { $$ = tl_list_append( $1, $2 ); }
     ;
 
 arg: LC_ID ':' type-term { $$ = tl_arg_new( $1, $3 ); }
