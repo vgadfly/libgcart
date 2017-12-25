@@ -9,21 +9,6 @@ extern int yydebug;
 
 int yywrap() { return 1; }
 
-void yyerror( const char *estr )
-{
-    fprintf( stderr, "parser error: %s\n", estr );
-}
-
-int main(int argc, char *argv[])
-{
-    if (argc > 1){
-        if (!strcmp(argv[1], "-d"))
-            yydebug = 1;
-    }
-    yyparse();
-    return 0;
-}
-
 enum {
     TL_TYPES,
     TL_FUNCS
@@ -84,26 +69,6 @@ static tl_cond *tl_cond_new( char *name, int bitmask )
     cond->name = name;
     cond->bitmask = bitmask;
     return cond;
-}
-
-static void tl_type_gen( char *constr, int hash, tl_type *type, tl_list *args )
-{
-    printf( "TYPE %s constr %s(%08x) { ", type->name, constr, hash );
-    for(; args; args = args->next){
-        tl_arg *arg = args->data;
-        printf( "%s: %s, ", arg->name, arg->type->name );
-    }
-    printf("}\n");
-}
-
-static void tl_func_gen( char *name, int hash, tl_type *res, tl_list *args )
-{
-    printf( "FUNC %s %s(%08x) { ", res->name, name, hash );
-    for(; args; args = args->next){
-        tl_arg *arg = args->data;
-        printf( "%s: %s, ", arg->name, arg->type->name );
-    }
-    printf("}\n");
 }
 
 static tl_list *tl_list_append( tl_list *head, void *item )

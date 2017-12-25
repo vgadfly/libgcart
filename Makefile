@@ -1,8 +1,9 @@
 CFLAGS=$(shell pkg-config --cflags glib-2.0)
 LDFLAGS=$(shell pkg-config --libs glib-2.0)
+CC=gcc
 
-test: lex.yy.c tl.tab.c
-	gcc $(CFLAGS) $(LDFLAGS) -o $@ $^
+tl-parse: lex.yy.c tl.tab.c parse.c
+	$(CC) $(CFLAGS) $(LDFLAGS) -o $@ $^
 
 lex.yy.c: tl.tab.c tl.l
 	flex tl.l

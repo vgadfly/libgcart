@@ -31,4 +31,9 @@ typedef struct _tl_cond {
     int bitmask;
 } tl_cond;
 
+int yylex(void);
+int yyparse(void);
+void yyerror( const char * );
+void tl_type_gen( char *constr, int hash, tl_type *type, tl_list *args );
+void tl_func_gen( char *name, int hash, tl_type *res, tl_list *args );
 
