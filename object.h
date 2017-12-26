@@ -1,8 +1,10 @@
 #ifndef __WAIN_OBJECT_H__
 #define __WAIN_OBJECT_H__
 
-#include <glib-gobject.h>
+#include <glib-object.h>
 #include <glib.h>
+
+#include "stream.h"
 
 G_BEGIN_DECLS
 
@@ -21,11 +23,11 @@ struct _WainObject
     GObject parent_instance;
 
     /* instance members */
-    void serialize(void);
+    void (*serialize)( wain_stream * );
 
-    void reserved1(void);
-    void reserved2(void);
-    void reserved3(void);
+    void (*reserved1)(void);
+    void (*reserved2)(void);
+    void (*reserved3)(void);
 };
 
 struct _WainObjectClass
@@ -33,12 +35,22 @@ struct _WainObjectClass
     GObjectClass parent_class;
 
     /* class members */
-    WainObject *read_object(guint32);
+    WainObject *(*from_bytes)( wain_stream * );
     
-    void reserved1(void);
-    void reserved2(void);
-    void reserved3(void);
+    void (*reserved1)(void);
+    void (*reserved2)(void);
+    void (*reserved3)(void);
 };
+
+/* primitive type ser/des */
+void wain_str_serialize( wain_stream *, gchar * );
+gchar *wain_str_from_bytes( wain_stream * );
+
+void wain_int_serialize( wain_stream *, gint32 );
+gint32 wain_int_from_bytes( wain_stream * );
+
+void wain_long_serialize( wain_stream *, gint64 );
+gint64 wain_long_from_bytes( wain_stream * );
 
 #endif /* __WAIN_OBJECT_H__ */
 

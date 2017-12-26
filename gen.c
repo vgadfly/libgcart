@@ -6,6 +6,7 @@
 
 #include "tl.h"
 #include "gen.h"
+#include "object.h"
 
 static GHashTable *headers;
 static GHashTable *sources;
@@ -15,6 +16,31 @@ static GList *types;
 void yyerror( const char *estr )
 {
     fprintf( stderr, "parser error: %s\n", estr );
+}
+
+gchar *wain_class_from_tl( tl_type *type )
+{
+    if (!strcmp(type->name, "int"))
+        return g_strdup("gint32");
+
+    if (!strcmp(type->name, "long"))
+        return g_strdup("gint64");
+
+    if (!strcmp(type->name, "string"))
+        return g_strdup("gchar *");
+
+    if (!strcmp(type->name, "nat"))
+        return g_strdup("guint32");
+
+    GString *name = g_string_new(type->name);
+    g_string_prepend( name, "Wain" );
+
+    return g_string_free( name, 0 );
+}
+
+gchar *wain_var_from_tl( char *arg )
+{
+    return g_strdup(arg);
 }
 
 void tl_class_gen( char *name, int hash, tl_type *res, tl_list *args )
@@ -97,6 +123,16 @@ void tl_class_gen( char *name, int hash, tl_type *res, tl_list *args )
     fprintf( header, "typedef struct _Wain%s Wain%s;\n", class_name, class_name );
     fprintf( header, "struct _Wain%s {\n", class_name );
     fprintf( header, "  WainObject parent_instance;\n" );
+
+    for (; args; args = args->next) {
+        tl_arg *arg = args->data;
+        gchar *type_name = wain_class_from_tl( arg->type );
+        gchar *var_name = wain_var_from_tl( arg->name );
+        fprintf( header, "  %s %s;\n", type_name, var_name );
+        g_free(type_name);
+        g_free(var_name);
+    }
+
     fprintf( header, "};\n" );
     fprintf( header, "struct _Wain%sClass {\n", class_name );
     fprintf( header, "  WainObject parent_class;\n" );
