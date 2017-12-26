@@ -82,29 +82,29 @@ void tl_class_gen( char *name, int hash, tl_type *res, tl_list *args )
     header = fopen(header_name->str, "a+");
     source = fopen(source_name->str, "a+");
     
-    fprintf( header, "#define CART_TYPE_%s cart_%s_get_type()\n", macro_name, method_prefix );
-    fprintf( header, "#define CART_%s(obj) (G_TYPE_CHECK_INSTANCE_CAST ((obj), CART_TYPE_%s, Cart%s))\n",
+    fprintf( header, "#define WAIN_TYPE_%s wain_%s_get_type()\n", macro_name, method_prefix );
+    fprintf( header, "#define WAIN_%s(obj) (G_TYPE_CHECK_INSTANCE_CAST ((obj), WAIN_TYPE_%s, Wain%s))\n",
             macro_name, macro_name, class_name );
-    fprintf( header, "#define CART_IS_%s(obj) (G_CHECK_TYPE_INSTANCE_TYPE ((obj), CART_TYPE_%s))\n",
+    fprintf( header, "#define WAIN_IS_%s(obj) (G_CHECK_TYPE_INSTANCE_TYPE ((obj), WAIN_TYPE_%s))\n",
             macro_name, macro_name );
-    fprintf( header, "#define CART_%s_CLASS(klass) (G_TYPE_CHECK_CLASS_CAST ((klass), CART_TYPE_%s, Cart%s))\n",
+    fprintf( header, "#define WAIN_%s_CLASS(klass) (G_TYPE_CHECK_CLASS_CAST ((klass), WAIN_TYPE_%s, Wain%s))\n",
             macro_name, macro_name, class_name );
-    fprintf( header, "#define CART_IS_%s_CLASS(klass) (G_TYPE_CHECK_CLASS_TYPE ((klass), CART_TYPE_%s))\n",
+    fprintf( header, "#define WAIN_IS_%s_CLASS(klass) (G_TYPE_CHECK_CLASS_TYPE ((klass), WAIN_TYPE_%s))\n",
             macro_name, macro_name );
-    fprintf( header, "#define CART_%s_GET_CLASS(obj) (G_TYPE_INSTANCE_GET_CLASS ((obj), CART_TYPE_%s, Cart%s))\n",
+    fprintf( header, "#define WAIN_%s_GET_CLASS(obj) (G_TYPE_INSTANCE_GET_CLASS ((obj), WAIN_TYPE_%s, Wain%s))\n",
             macro_name, macro_name, class_name );
     fprintf( header, "\n" );
-    fprintf( header, "typedef struct _Cart%s Cart%s;\n", class_name, class_name );
-    fprintf( header, "struct _Cart%s {\n", class_name );
-    fprintf( header, "  CartObject parent_instance;\n" );
+    fprintf( header, "typedef struct _Wain%s Wain%s;\n", class_name, class_name );
+    fprintf( header, "struct _Wain%s {\n", class_name );
+    fprintf( header, "  WainObject parent_instance;\n" );
     fprintf( header, "};\n" );
-    fprintf( header, "struct _Cart%sClass {\n", class_name );
-    fprintf( header, "  CartObject parent_class;\n" );
+    fprintf( header, "struct _Wain%sClass {\n", class_name );
+    fprintf( header, "  WainObject parent_class;\n" );
     fprintf( header, "};\n" );
     fprintf( header, "\n" );
 
     fprintf( source, "#include \"%s\"\n", header_name->str );
-    fprintf( source, "G_DEFINE_TYPE(Cart%s, cart_%s, G_TYPE_OBJECT)\n", class_name, method_prefix );
+    fprintf( source, "G_DEFINE_TYPE(Wain%s, wain_%s, G_TYPE_OBJECT)\n", class_name, method_prefix );
     fprintf( source, "\n" );
 
     fclose(header);
@@ -146,8 +146,8 @@ int main( int argc, char *argv[] )
     if (headers && sources){
         FILE *src = fopen( "auto.h", "w" );
 
-        fprintf( src, "#ifndef __CART_AUTO_H__\n" );
-        fprintf( src, "#define __CART_AUTO_H__\n" );
+        fprintf( src, "#ifndef __WAIN_AUTO_H__\n" );
+        fprintf( src, "#define __WAIN_AUTO_H__\n" );
         fprintf( src, "#include <glib-object.h>\n" );
         fprintf( src, "#include <glib.h>\n" );
         fprintf( src, "\n" );
