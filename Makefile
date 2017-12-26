@@ -4,6 +4,10 @@ CC=gcc
 
 CFLAGS+=-O0 -g
 
+all: bin
+
+bin: tl-parse tl-gen
+
 tl-parse: lex.yy.c tl.tab.c parse.c
 	$(CC) $(CFLAGS) $(LDFLAGS) -o $@ $^
 
@@ -15,6 +19,8 @@ lex.yy.c: tl.tab.c tl.l
 
 tl.tab.c: tl.y
 	bison -t -d --report all tl.y
+
+.PHONY: clean
 
 clean:
 	rm tl.tab.c tl.tab.h lex.yy.c
