@@ -23,11 +23,6 @@ struct _WainObject
     GObject parent_instance;
 
     /* instance members */
-    void (*serialize)( wain_stream * );
-
-    void (*reserved1)(void);
-    void (*reserved2)(void);
-    void (*reserved3)(void);
 };
 
 struct _WainObjectClass
@@ -35,11 +30,12 @@ struct _WainObjectClass
     GObjectClass parent_class;
 
     /* class members */
+
+    /* virtual methods */
+    void (*serialize)( WainObject *, wain_stream * );
     WainObject *(*from_bytes)( wain_stream * );
     
-    void (*reserved1)(void);
-    void (*reserved2)(void);
-    void (*reserved3)(void);
+    gpointer padding[8];
 };
 
 /* primitive type ser/des */
