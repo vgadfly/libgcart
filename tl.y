@@ -23,12 +23,49 @@ static char *ns_concat( char *ns, char *id )
     return res;
 }
 
+static tl_list *tl_list_append( tl_list *head, void *item )
+{
+    tl_list *new_elem = malloc(sizeof(tl_list));
+    new_elem->data = item;
+    new_elem->next = NULL;
+    if (head == NULL)
+        return new_elem;
+
+    tl_list *list = head;
+    while( list->next )
+        list = list->next;
+    
+    list->next = new_elem;
+
+    return head;
+}
+
+static void tl_list_free( tl_list *list, void (*destr)(void *) )
+{
+    tl_list *tmp;
+    for(; list; list = tmp){
+        tmp = list->next;
+        if (destr != NULL)
+            destr(list->data);
+        free(list);
+    }
+}
+
 static tl_type *tl_type_new( char *name, int modifiers )
 {
     tl_type *res = malloc(sizeof(tl_type));
     res->name = name;
     res->modifiers = modifiers;
+    res->t_args = NULL;
     return res;
+}
+
+static void tl_type_free( tl_type *t )
+{
+    free(t->name);
+    if (t->t_args)
+        tl_list_free(t->t_args, free);
+    free(t);
 }
 
 static tl_type *tl_type_new_template( char *name, tl_list *targs )
@@ -44,7 +81,17 @@ static tl_arg *tl_arg_new( char *name, tl_type *type )
     arg->name = name;
     arg->type = type;
     arg->modifiers = ARG_MOD_NONE;
+    arg->cond_field = NULL;
     return arg;
+}
+
+static void tl_arg_free( tl_arg *arg )
+{
+    free(arg->name);
+    tl_type_free(arg->type);
+    if(arg->cond_field)
+        free(arg->cond_field);
+    free(arg);
 }
 
 static tl_arg *tl_arg_new_cond( char *name, tl_type *type, tl_cond *cond )
@@ -69,23 +116,6 @@ static tl_cond *tl_cond_new( char *name, int bitmask )
     cond->name = name;
     cond->bitmask = bitmask;
     return cond;
-}
-
-static tl_list *tl_list_append( tl_list *head, void *item )
-{
-    tl_list *new_elem = malloc(sizeof(tl_list));
-    new_elem->data = item;
-    new_elem->next = NULL;
-    if (head == NULL)
-        return new_elem;
-
-    tl_list *list = head;
-    while( list->next )
-        list = list->next;
-    
-    list->next = new_elem;
-
-    return head;
 }
 
 %}
@@ -180,6 +210,9 @@ combinator: full-id opt-hash opt-args args '=' result-type ';'
                 tl_type_gen( $1, $2, $6, $4 );
             else
                 tl_func_gen( $1, $2, $6, $4 );
+            free($1);
+            tl_type_free($6);
+            tl_list_free($4, tl_arg_free);
         }
         ;
 
