@@ -11,17 +11,17 @@ static guint32 wain_read_word( void *dummy )
     return strtoul(buf, NULL, 0);
 }
 
-static void wain_write_word( void *dummy, guin32 word )
+static void wain_write_word( void *dummy, guint32 word )
 {
-    printf("output: 0x%08x", word);
+    printf("output: 0x%08x\n", word);
 }
 
-static wain_dummy_stream {
+static WainDummyStream dummy_instance = {
     .read_word = wain_read_word,
     .write_word = wain_write_word
-} dummy_instance;
+};
 
-wain_dummy_stream *wain_dummy_stream_instance()
+WainDummyStream *wain_dummy_stream_instance()
 {
     return &dummy_instance;
 }

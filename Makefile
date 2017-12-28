@@ -20,7 +20,7 @@ lex.yy.c: tl.tab.c tl.l
 tl.tab.c: tl.y
 	bison -t -d --report all tl.y
 
-test: test.c object.c auto.c
+test: test.c dummy.c object.c auto.c
 	$(CC) $(CFLAGS) $(LDFLAGS) -o $@ $^
 
 auto.c: tl-gen
