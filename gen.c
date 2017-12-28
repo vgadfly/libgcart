@@ -168,6 +168,8 @@ void tl_class_gen( char *name, int hash, tl_type *res, tl_list *args )
     
     if (!g_hash_table_contains( headers, header_name->str ))
         g_hash_table_insert( headers, g_strdup( header_name->str ), NULL );
+    if (!g_hash_table_contains( sources, source_name->str ))
+        g_hash_table_insert( sources, g_strdup( source_name->str ), NULL );
     header = fopen(header_name->str, "a+");
     source = fopen(source_name->str, "a+");
     
@@ -200,6 +202,7 @@ void tl_class_gen( char *name, int hash, tl_type *res, tl_list *args )
 
     fprintf( header, "};\n" );
     fprintf( header, "\n" );
+    fprintf( header, "typedef struct _Wain%sClass Wain%sClass;\n", class_name, class_name );
     fprintf( header, "struct _Wain%sClass {\n", class_name );
     fprintf( header, "  WainObject parent_class;\n" );
     fprintf( header, "};\n" );
@@ -222,16 +225,16 @@ void tl_class_gen( char *name, int hash, tl_type *res, tl_list *args )
                     wa->name );
             switch (wa->klass) {
                 case T_TYPE_OBJECT:
-                    fprintf( source, "    %s *%s = l_%s->data;\n",
-                            wa->type, wa->name, wa->name );
+                    fprintf( source, "    %1$s *%2$s = l_%2$s->data;\n",
+                            wa->type, wa->name );
                     break;
                 case T_TYPE_STRING:
-                    fprintf( source, "    %s %s = l_%s->data;\n",
-                            wa->type, wa->name, wa->name );
+                    fprintf( source, "    %1$s %2$s = l_%2$s->data;\n",
+                            wa->type, wa->name );
                     break;
                 default:
-                    fprintf( source, "    %s %s = *l_%s->data;\n",
-                            wa->type, wa->name, wa->name );
+                    fprintf( source, "    %1$s %2$s = *(%1$s *)l_%2$s->data;\n",
+                            wa->type, wa->name );
             }
             switch (wa->klass) {
                 case T_TYPE_INT:
@@ -323,12 +326,23 @@ int main( int argc, char *argv[] )
         fprintf( src, "#include <glib-object.h>\n" );
         fprintf( src, "#include <glib.h>\n" );
         fprintf( src, "\n" );
+        fprintf( src, "#include \"object.h\"\n" );
+        fprintf( src, "\n" );
         GList *k, *keys = g_hash_table_get_keys( headers );
         for ( k = keys; k; k = k->next ){
             fprintf( src, "#include \"%s\"\n", k->data );
         }
         g_list_free(keys);
         fprintf( src, "\n#endif\n" );
+        fclose(src);
+
+        src = fopen( "auto.c", "w" );
+        fprintf( src, "#include \"auto.h\"\n\n" );
+        
+        keys = g_hash_table_get_keys( sources );
+        for ( k = keys; k; k = k->next ){
+            fprintf( src, "#include \"%s\"\n", k->data );
+        }
         fclose(src);
     }
 

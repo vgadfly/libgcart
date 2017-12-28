@@ -3,9 +3,9 @@
 
 #include <glib.h>
 
-typedef struct _wain_stream wain_stream;
+typedef struct _WainStream WainStream;
 
-struct _wain_stream {
+struct _WainStream {
     guint32 (*read_word)( void* );
     void (*write_word)( void *, guint32 );
 };

@@ -1,4 +1,4 @@
-#include "wain_object.h"
+#include "object.h"
 
 G_DEFINE_TYPE(WainObject, wain_object, G_TYPE_OBJECT);
 

@@ -32,21 +32,21 @@ struct _WainObjectClass
     /* class members */
 
     /* virtual methods */
-    void (*serialize)( WainObject *, wain_stream * );
-    WainObject *(*from_bytes)( wain_stream * );
+    void (*serialize)( WainObject *, WainStream * );
+    WainObject *(*from_bytes)( WainStream * );
     
     gpointer padding[8];
 };
 
 /* primitive type ser/des */
-void wain_str_serialize( wain_stream *, gchar * );
-gchar *wain_str_from_bytes( wain_stream * );
+void wain_str_serialize( WainStream *, gchar * );
+gchar *wain_str_from_bytes( WainStream * );
 
-void wain_int_serialize( wain_stream *, gint32 );
-gint32 wain_int_from_bytes( wain_stream * );
+void wain_int_serialize( WainStream *, gint32 );
+gint32 wain_int_from_bytes( WainStream * );
 
-void wain_long_serialize( wain_stream *, gint64 );
-gint64 wain_long_from_bytes( wain_stream * );
+void wain_long_serialize( WainStream *, gint64 );
+gint64 wain_long_from_bytes( WainStream * );
 
 #endif /* __WAIN_OBJECT_H__ */
 
