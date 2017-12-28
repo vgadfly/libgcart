@@ -87,7 +87,8 @@ static tl_arg *tl_arg_new( char *name, tl_type *type )
 
 static void tl_arg_free( tl_arg *arg )
 {
-    free(arg->name);
+    if(arg->name)
+        free(arg->name);
     tl_type_free(arg->type);
     if(arg->cond_field)
         free(arg->cond_field);
@@ -231,8 +232,8 @@ args: /* empty */ { $$ = NULL; }
 arg: LC_ID ':' type-term { $$ = tl_arg_new( $1, $3 ); }
         | LC_ID ':' condition '?' type-term { $$ = tl_arg_new_cond( $1, $5, $3 ); free($3); }
         | UC_ID ':' type-term { $$ = tl_arg_new( $1, $3 ); }
-        | type-term { $$ = tl_arg_new( "", $1 ); }
-        | '[' LC_ID ']' { $$ = tl_arg_new_mult( "", tl_type_new( $2, TYPE_MOD_NONE ) ); }
+        | type-term { $$ = tl_arg_new( NULL, $1 ); }
+        | '[' LC_ID ']' { $$ = tl_arg_new_mult( NULL, tl_type_new( $2, TYPE_MOD_NONE ) ); }
         ;
 
 condition: LC_ID bit-selector { $$ = tl_cond_new( $1, $2 ); }
