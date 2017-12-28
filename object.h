@@ -38,14 +38,16 @@ struct _WainObjectClass
     gpointer padding[8];
 };
 
+void wain_object_serialize( WainObject *, WainStream * );
+
 /* primitive type ser/des */
-void wain_str_serialize( WainStream *, gchar * );
+void wain_str_serialize( gchar *, WainStream * );
 gchar *wain_str_from_bytes( WainStream * );
 
-void wain_int_serialize( WainStream *, gint32 );
+void wain_int_serialize( gint32, WainStream * );
 gint32 wain_int_from_bytes( WainStream * );
 
-void wain_long_serialize( WainStream *, gint64 );
+void wain_long_serialize( gint64, WainStream * );
 gint64 wain_long_from_bytes( WainStream * );
 
 #endif /* __WAIN_OBJECT_H__ */

@@ -204,7 +204,7 @@ void tl_class_gen( char *name, int hash, tl_type *res, tl_list *args )
     fprintf( header, "\n" );
     fprintf( header, "typedef struct _Wain%sClass Wain%sClass;\n", class_name, class_name );
     fprintf( header, "struct _Wain%sClass {\n", class_name );
-    fprintf( header, "  WainObject parent_class;\n" );
+    fprintf( header, "  WainObjectClass parent_class;\n" );
     fprintf( header, "};\n" );
     fprintf( header, "\n" );
     fprintf( header, "void wain_%s_serialize( Wain%s *, WainStream * );\n", method_prefix, class_name );
@@ -212,13 +212,22 @@ void tl_class_gen( char *name, int hash, tl_type *res, tl_list *args )
 
     fprintf( source, "G_DEFINE_TYPE(Wain%s, wain_%s, G_TYPE_OBJECT)\n", class_name, method_prefix );
     fprintf( source, "\n" );
+    fprintf( source, "static void wain_%s_init( Wain%s *obj ) {  }\n",
+            method_prefix, class_name );
+
+    fprintf( source, "static void wain_%s_class_init( Wain%sClass *klass )\n",
+            method_prefix, class_name );
+    fprintf( source, "{\n" );
+    fprintf( source, "  klass->parent_class.serialize = wain_%s_serialize;\n", method_prefix );
+    fprintf( source, "}\n" );
+
     fprintf( source, "void wain_%s_serialize( Wain%s *self, WainStream *stream )\n", 
             method_prefix, class_name );
     fprintf( source, "{\n" );
     for (al = arglist; al; al = al->next) {
         WainArg *wa = al->data;
         if (wa->is_list) {
-            fprintf( source, "  wain_int_serialize( stream, g_list_length( self->%s ) );\n",
+            fprintf( source, "  wain_int_serialize( g_list_length( self->%s ), stream );\n",
                     wa->name );
             fprintf( source, "  GList *l_%s;\n", wa->name );
             fprintf( source, "  for(l_%1$s=self->%1$s; l_%1$s; l_%1$s = l_%1$s->next) {\n",
@@ -239,19 +248,19 @@ void tl_class_gen( char *name, int hash, tl_type *res, tl_list *args )
             switch (wa->klass) {
                 case T_TYPE_INT:
                 case T_TYPE_UINT:
-                    fprintf( source, "    wain_int_serialize( stream, %s );\n",
+                    fprintf( source, "    wain_int_serialize( %s, stream );\n",
                            wa->name );
                     break;
                 case T_TYPE_LONG:
-                    fprintf( source, "    wain_long_serialize( stream, %s );\n",
+                    fprintf( source, "    wain_long_serialize( %s, stream );\n",
                            wa->name );
                     break;
                 case T_TYPE_STRING:
-                    fprintf( source, "    wain_str_serialize( stream, %s );\n",
+                    fprintf( source, "    wain_str_serialize( %s, stream );\n",
                            wa->name );
                     break;
                 case T_TYPE_OBJECT:
-                    fprintf( source, "    wain_object_serialize( stream, %s );\n",
+                    fprintf( source, "    wain_object_serialize( WAIN_OBJECT(%s), stream );\n",
                            wa->name );
                     break;
             }
@@ -261,19 +270,19 @@ void tl_class_gen( char *name, int hash, tl_type *res, tl_list *args )
             switch( wa->klass ){
                 case T_TYPE_INT:
                 case T_TYPE_UINT:
-                    fprintf( source, "  wain_int_serialize( stream, self->%s );\n",
+                    fprintf( source, "  wain_int_serialize( self->%s, stream );\n",
                            wa->name );
                     break;
                 case T_TYPE_LONG:
-                    fprintf( source, "  wain_long_serialize( stream, self->%s );\n",
+                    fprintf( source, "  wain_long_serialize( self->%s, stream );\n",
                            wa->name );
                     break;
                 case T_TYPE_STRING:
-                    fprintf( source, "  wain_str_serialize( stream, self->%s );\n",
+                    fprintf( source, "  wain_str_serialize( self->%s, stream );\n",
                            wa->name );
                     break;
                 case T_TYPE_OBJECT:
-                    fprintf( source, "  wain_object_serialize( stream, self->%s );\n",
+                    fprintf( source, "  wain_object_serialize( WAIN_OBJECT(self->%s), stream );\n",
                            wa->name );
                     break;
             }
