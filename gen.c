@@ -210,7 +210,7 @@ void tl_class_gen( char *name, int hash, tl_type *res, tl_list *args )
     fprintf( header, "void wain_%s_serialize( Wain%s *, WainStream * );\n", method_prefix, class_name );
     fprintf( header, "\n" );
 
-    fprintf( source, "G_DEFINE_TYPE(Wain%s, wain_%s, G_TYPE_OBJECT)\n", class_name, method_prefix );
+    fprintf( source, "G_DEFINE_TYPE(Wain%s, wain_%s, WAIN_TYPE_OBJECT)\n", class_name, method_prefix );
     fprintf( source, "\n" );
     fprintf( source, "static void wain_%s_init( Wain%s *obj ) {  }\n",
             method_prefix, class_name );
