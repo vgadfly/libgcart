@@ -30,6 +30,7 @@ struct _WainObjectClass
     GObjectClass parent_class;
 
     /* class members */
+    guint32 id;
 
     /* virtual methods */
     void (*serialize)( WainObject *, WainStream * );
