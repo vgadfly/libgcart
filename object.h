@@ -9,21 +9,7 @@
 G_BEGIN_DECLS
 
 #define WAIN_TYPE_OBJECT                   wain_object_get_type()
-#define WAIN_OBJECT(obj)                   (G_TYPE_CHECK_INSTANCE_CAST ((obj), WAIN_TYPE_OBJECT, WainObject))
-#define WAIN_IS_OBJECT(obj)                (G_TYPE_CHECK_INSTANCE_TYPE ((obj), WAIN_TYPE_OBJECT))
-#define WAIN_OBJECT_CLASS(_class)          (G_TYPE_CHECK_CLASS_CAST ((_class), WAIN_TYPE_OBJECT, WainObjectClass))
-#define WAIN_IS_OBJECT_CLASS(_class)       (G_TYPE_CHECK_CLASS_TYPE ((_class), WAIN_TYPE_OBJECT))
-#define WAIN_OBJECT_GET_CLASS(obj)         (G_TYPE_INSTANCE_GET_CLASS ((obj), WAIN_TYPE_OBJECT, WainObjectClass))
-
-typedef struct _WainObject WainObject;
-typedef struct _WainObjectClass WainObjectClass;
-
-struct _WainObject
-{
-    GObject parent_instance;
-
-    /* instance members */
-};
+G_DECLARE_DERIVABLE_TYPE (WainObject, wain_object, WAIN, OBJECT, GObject)
 
 struct _WainObjectClass
 {

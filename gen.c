@@ -174,16 +174,8 @@ void tl_class_gen( char *name, int hash, tl_type *res, tl_list *args )
     source = fopen(source_name->str, "a+");
     
     fprintf( header, "#define WAIN_TYPE_%s wain_%s_get_type()\n", macro_name, method_prefix );
-    fprintf( header, "#define WAIN_%s(obj) (G_TYPE_CHECK_INSTANCE_CAST ((obj), WAIN_TYPE_%s, Wain%s))\n",
-            macro_name, macro_name, class_name );
-    fprintf( header, "#define WAIN_IS_%s(obj) (G_CHECK_TYPE_INSTANCE_TYPE ((obj), WAIN_TYPE_%s))\n",
-            macro_name, macro_name );
-    fprintf( header, "#define WAIN_%s_CLASS(klass) (G_TYPE_CHECK_CLASS_CAST ((klass), WAIN_TYPE_%s, Wain%s))\n",
-            macro_name, macro_name, class_name );
-    fprintf( header, "#define WAIN_IS_%s_CLASS(klass) (G_TYPE_CHECK_CLASS_TYPE ((klass), WAIN_TYPE_%s))\n",
-            macro_name, macro_name );
-    fprintf( header, "#define WAIN_%s_GET_CLASS(obj) (G_TYPE_INSTANCE_GET_CLASS ((obj), WAIN_TYPE_%s, Wain%s))\n",
-            macro_name, macro_name, class_name );
+    fprintf( header, "G_DECLARE_FINAL_TYPE (Wain%s, wain_%s, WAIN, %s, WainObject)\n",
+            class_name, method_prefix, macro_name );
     fprintf( header, "\n" );
     fprintf( header, "typedef struct _Wain%s Wain%s;\n", class_name, class_name );
     fprintf( header, "struct _Wain%s {\n", class_name );
@@ -200,11 +192,6 @@ void tl_class_gen( char *name, int hash, tl_type *res, tl_list *args )
                     wa->type, wa->klass == T_TYPE_OBJECT ? "*" : "", wa->name );
     }
 
-    fprintf( header, "};\n" );
-    fprintf( header, "\n" );
-    fprintf( header, "typedef struct _Wain%sClass Wain%sClass;\n", class_name, class_name );
-    fprintf( header, "struct _Wain%sClass {\n", class_name );
-    fprintf( header, "  WainObjectClass parent_class;\n" );
     fprintf( header, "};\n" );
     fprintf( header, "\n" );
     fprintf( header, "void wain_%s_serialize( Wain%s *, WainStream * );\n", method_prefix, class_name );
