@@ -3,11 +3,19 @@
 #include <stdlib.h>
 #include <string.h>
 
+#ifndef ALIGN
+#define ALIGN(x,a) __ALIGN_MASK(x,(typeof(x))(a)-1)
+#define __ALIGN_MASK(x,mask) (((x)+(mask))&~(mask))
+#endif
+
 G_DEFINE_TYPE(WainObject, wain_object, G_TYPE_OBJECT);
 
+/* === Object === */
 static void wain_object_class_init( WainObjectClass *klass )
 {
     klass->serialize = NULL;
+    klass->length = NULL;
+    klass->from_bytes = NULL;
 }
 
 static void wain_object_init( WainObject *obj )
@@ -19,39 +27,95 @@ GObject *wain_object_new(void)
     return g_object_new( WAIN_TYPE_OBJECT, 0 );
 }
 
-void wain_int_serialize( gint32 i, WainStream *stream )
+void wain_object_serialize( WainObject *obj, gchar *bytes )
 {
-    stream->write_word( stream, htole32(i) );
+    WainObjectClass *woc = WAIN_OBJECT_GET_CLASS(obj);
+    /* call virtual serialize */
+    woc->serialize( obj, bytes );
 }
 
-void wain_long_serialize( gint64 l, WainStream *stream )
+/* === int === */
+void wain_int_serialize( gint32 i, gchar *bytes )
 {
-    stream->write_word( stream, htole32(l&0xFFFFFFFF) );
-    stream->write_word( stream, htole32((l>>32)&0xFFFFFFFF) );
+    *(guint32 *)bytes = htole32(i);
 }
 
-void wain_str_serialize( gchar *s, WainStream *stream )
+gint32 wain_int_from_bytes( gchar *bytes )
 {
-    const guint32 mask[] = {0, 0xff, 0xffff, 0xffffff};
+    return le32toh(*(guint32 *)bytes);
+}
+
+/* === nat === */
+void wain_nat_serialize( guint32 u, gchar *bytes )
+{
+    *(guint32 *)bytes = htole32(u);
+}
+
+guint32 wain_nat_from_bytes( gchar *bytes )
+{
+    return le32toh(*(guint32 *)bytes);
+}
+
+/* === long === */
+void wain_long_serialize( gint64 l, gchar *bytes )
+{
+    *(guint64 *)bytes = htole64(l);
+}
+
+gint64 wain_long_from_bytes( gchar *bytes )
+{
+    return le64toh(*(guint64 *)bytes);
+}
+
+/* === str === */
+gint32 wain_str_length( gchar *s )
+{
     int len = strlen(s);
     if (len < 254) {
-        guint32 val = len | (s[0] << 8) | (s[1] << 16 | s[2] << 24);
+        return ALIGN(len+1, 4);
+    }
+    else {
+        return ALIGN(len, 4) + 4;
+    }
+}
+
+void wain_str_serialize( gchar *s, gchar *bytes )
+{
+    const guint32 mask[] = {0, 0xff, 0xffff, 0xffffff};
+    guint32 len = strlen(s);
+    int i;
+
+    if ( len < 254 ) {
+        guint32 val = len & 0xFF | ((guint32)s[0] << 8) | ((guint32)s[1] << 16) | ((guint32)s[2] << 24);
         if (len < 3)
-            val &= mask[len+1];
-        wain_int_serialize( val, stream );
-        int i;
-        for (i = 3; i < len; i+=4) {
-            val = s[i] | (s[i+1] << 8) | (s[i+2] << 16 | s[i+3] << 24);
+            val &= htole32( mask[len+1] );
+        *(guint32 *)bytes = val;
+        bytes += 4;
+        
+        for ( i = 3; i < len; i += 4, bytes += 4 ) {
+            val = (guint32)s[i] | ((guint32)s[i+1] << 8) | ((guint32)s[i+2] << 16) | ((guint32)s[i+3] << 24);
             if (len-i < 4)
-                val &= mask[len-i];
-            wain_int_serialize( val, stream );
+                val &= htole32( mask[len-i] );
+            *(guint32 *)bytes = val;
+        }
+    }
+    else
+    {
+        guint32 val = 254 | (len << 8);
+        *(guint32 *)bytes = val;
+        bytes += 4;
+
+        for ( i = 0; i < len; i += 4, bytes += 4 ) {
+            val = (guint32)s[i] | ((guint32)s[i+1] << 8) | ((guint32)s[i+2] << 16) | ((guint32)s[i+3] << 24);
+            if (len-i < 4)
+                val &= htole32( mask[len-i] );
+            *(guint32 *)bytes = val;
         }
     }
 }
 
-void wain_object_serialize( WainObject *obj, WainStream *stream )
+gchar *wain_str_from_bytes( gchar *bytes )
 {
-    WainObjectClass *woc = WAIN_OBJECT_GET_CLASS(obj);
-    woc->serialize( obj, stream );
+    return NULL;
 }
 
