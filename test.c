@@ -9,19 +9,39 @@
 
 int main( int argc, char *argv[] )
 {
-    WainDummyStream *ds = wain_dummy_stream_instance();
+    gchar *bytes;
+    guint len;
+    int i;
+
     WainOne *one = g_object_new( WAIN_TYPE_ONE, NULL );
     one->i = 0x33;
     one->s = "lolkek";
-    printf( "== One ==\n" );
-    wain_object_serialize( one, ds );
+    
+    len =  wain_object_length( one );
+    printf( "One serialized len is %u\n", len );
+    bytes = g_malloc(len);
+    wain_object_serialize( one, bytes );
+    
+    for ( i = 0; i < len; i+=4 )
+        printf("%08X.", *(guint32*)(bytes+i));
+    printf("\n");
+
+    g_free(bytes);
 
     WainTwo *two = g_object_new( WAIN_TYPE_TWO, NULL );
     two->t1 = one;
     two->t2 = one;
-    printf( "== Two ==\n" );
-    wain_object_serialize( two, ds );
-
+    len =  wain_object_length( two );
+    printf( "Two serialized len is %u\n", len );
+    bytes = g_malloc(len);
+    wain_object_serialize( two, bytes );
+    
+    for ( i = 0; i < len; i+=4 )
+        printf("%08X.", *(guint32*)(bytes+i));
+    printf("\n");
+    
+    g_free(bytes);
+/*
     WainThree *three = g_object_new( WAIN_TYPE_THREE, NULL );
     GList *list = NULL;
     gint32 *pi = g_new(gint32, 1);
@@ -41,6 +61,6 @@ int main( int argc, char *argv[] )
     three->vs = list;
     printf( "== Three ==\n" );
     wain_object_serialize( three, ds );
-
+*/
     return 0;
 }

@@ -27,6 +27,13 @@ GObject *wain_object_new(void)
     return g_object_new( WAIN_TYPE_OBJECT, 0 );
 }
 
+gint32 wain_object_length( WainObject *obj )
+{
+    WainObjectClass *woc = WAIN_OBJECT_GET_CLASS(obj);
+    /* call virtual length */
+    return woc->length(obj);
+}
+
 void wain_object_serialize( WainObject *obj, gchar *bytes )
 {
     WainObjectClass *woc = WAIN_OBJECT_GET_CLASS(obj);

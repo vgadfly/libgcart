@@ -19,7 +19,7 @@ struct _WainObjectClass
     guint32 id;
 
     /** serialized length of the object */
-    gint32 (*length)( void );
+    gint32 (*length)( WainObject * );
 
     /** serialize object */
     void (*serialize)( WainObject *, gchar * );
