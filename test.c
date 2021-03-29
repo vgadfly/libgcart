@@ -16,6 +16,9 @@ int main( int argc, char *argv[] )
     WainOne *one = g_object_new( WAIN_TYPE_ONE, NULL );
     one->i = 0x33;
     one->s = "lolkek";
+    one->d = 0.1;
+    one->l = -1;
+    one->b = TRUE;
     
     len =  wain_object_length( one );
     printf( "One serialized len is %u\n", len );

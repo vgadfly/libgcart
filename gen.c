@@ -18,7 +18,19 @@ enum wain_type {
     T_TYPE_LONG,
     T_TYPE_UINT,
     T_TYPE_STRING,
+    T_TYPE_DOUBLE,
+    T_TYPE_BOOL,
     T_TYPE_OBJECT
+};
+
+const char *wain_type_names[] = {
+    "int",
+    "long",
+    "nat",
+    "str",
+    "double",
+    "bool",
+    "object"
 };
 
 typedef struct _WainArg WainArg;
@@ -29,6 +41,7 @@ struct _WainArg {
     int is_list;
 };
 
+#define VECTOR_ID 0x1cb5c415
 
 void yyerror( const char *estr )
 {
@@ -37,7 +50,7 @@ void yyerror( const char *estr )
 
 static gchar *wain_class_from_tl( char *type_name, int *klass )
 {
-
+    /* XXX: hashmap? */
     if (!strcmp(type_name, "int")) {
         *klass = T_TYPE_INT;
         return g_strdup("gint32");
@@ -46,7 +59,7 @@ static gchar *wain_class_from_tl( char *type_name, int *klass )
         *klass = T_TYPE_LONG;
         return g_strdup("gint64");
     }
-    if (!strcmp(type_name, "string")) {
+    if (!strcmp(type_name, "string") || !strcmp(type_name, "bytes")) {
         *klass = T_TYPE_STRING;
         return g_strdup("gchar *");
     }
@@ -54,10 +67,20 @@ static gchar *wain_class_from_tl( char *type_name, int *klass )
         *klass = T_TYPE_UINT;
         return g_strdup("guint32");
     }
+    if (!strcmp(type_name, "double")) {
+        *klass = T_TYPE_DOUBLE;
+        return g_strdup("gdouble");
+    }
+    if (!strcmp(type_name, "Bool")) {
+        *klass = T_TYPE_BOOL;
+        return g_strdup("gboolean");
+    }
+
     *klass = T_TYPE_OBJECT;
     GString *name = g_string_new(type_name);
     g_string_prepend( name, "Wain" );
 
+    /* XXX: leaks */
     return g_string_free( name, 0 );
 }
 
@@ -104,6 +127,74 @@ static GList *wain_args_from_tl( tl_list *args )
         res = g_list_append( res, wa );
     }
     return res;
+}
+
+/* helpers */
+
+static void mk_list_item( FILE *output, const char * prefix, enum wain_type klass, const char *ctype, const char *cname )
+{
+    switch (klass) {
+        case T_TYPE_OBJECT:
+            fprintf( output, "%s%s *%s = l_%s->data;\n",
+                    prefix, ctype, cname, cname );
+            break;
+        case T_TYPE_STRING:
+            fprintf( output, "%s%s %s = l_%s->data;\n",
+                    prefix, ctype, cname, cname );
+            break;
+        default:
+            fprintf( output, "%s%s %s = *(%s *)l_%s->data;\n",
+                    prefix, ctype, cname, ctype, cname );
+    }
+}
+
+static void mk_list_item_len( FILE *output, const char *prefix, const char *var, enum wain_type klass, const char *cname )
+{
+    if (klass < T_TYPE_OBJECT ) {
+        fprintf( output, "%s%s += wain_%s_length(%s);\n",
+                prefix, var, wain_type_names[klass], cname );
+    }
+    else {
+        fprintf( output, "%s%s += wain_object_length( WAIN_OBJECT(%s) );\n",
+                prefix, var, cname );
+    }
+}
+
+static void mk_list_item_ser( FILE *output, const char *prefix, const char *var, enum wain_type klass, const char *cname )
+{
+    if (klass < T_TYPE_OBJECT ) {
+        fprintf( output, "%swain_%s_serialize( %s, %s );\n",
+                prefix, wain_type_names[klass], cname, var );
+        
+    } 
+    else {
+        fprintf( output, "%swain_object_serialize( WAIN_OBJECT(%s), %s );\n",
+                prefix, cname, var );
+    }
+}
+
+static void mk_param_len( FILE *output, const char *prefix, const char *var, enum wain_type klass, const char *cname )
+{
+    if (klass < T_TYPE_OBJECT ) {
+            fprintf( output, "%s%s += wain_%s_length(self->%s);\n",
+                prefix, var, wain_type_names[klass], cname );
+    }
+    else {
+        fprintf( output, "%s%s += wain_object_length( WAIN_OBJECT(self->%s) );\n",
+                prefix, var, cname );
+    }
+}
+
+static void mk_param_ser( FILE *output, const char *prefix, const char *var, enum wain_type klass, const char *cname )
+{
+    if (klass < T_TYPE_OBJECT ) {
+        fprintf( output, "%swain_%s_serialize( self->%s, %s );\n",
+                prefix, wain_type_names[klass], cname, var );
+    }
+    else {
+        fprintf( output, "%swain_object_serialize( WAIN_OBJECT(self->%s), bytes );\n",
+                prefix, cname );
+    }
 }
 
 void tl_class_gen( char *name, int hash, tl_type *res, tl_list *args )
@@ -205,7 +296,7 @@ void tl_class_gen( char *name, int hash, tl_type *res, tl_list *args )
 
     fprintf( source, "G_DEFINE_TYPE(Wain%s, wain_%s, WAIN_TYPE_OBJECT)\n", class_name, method_prefix );
     fprintf( source, "\n" );
-    fprintf( source, "static void wain_%s_init( Wain%s *obj ) {  }\n",
+    fprintf( source, "static void wain_%s_init( Wain%s *obj ) {  }\n\n",
             method_prefix, class_name );
 
     fprintf( source, "static void wain_%s_class_init( Wain%sClass *klass )\n",
@@ -215,7 +306,7 @@ void tl_class_gen( char *name, int hash, tl_type *res, tl_list *args )
     fprintf( source, "  klass->parent_class.serialize = wain_%s_serialize;\n", method_prefix );
     fprintf( source, "  klass->parent_class.length = wain_%s_length;\n", method_prefix );
     fprintf( source, "  klass->parent_class.from_bytes = wain_%s_from_bytes;\n", method_prefix );
-    fprintf( source, "}\n" );
+    fprintf( source, "}\n\n" );
 
     
     /* === length === */
@@ -230,68 +321,20 @@ void tl_class_gen( char *name, int hash, tl_type *res, tl_list *args )
         WainArg *wa = al->data;
         if (wa->is_list) {
             /* make Vector */
-            fprintf( source, "  len += 2 * wain_int_length(0);\n",
-                    wa->name );
+            fprintf( source, "  len += wain_int_length(%d);\n", VECTOR_ID);
+            fprintf( source, "  len += wain_int_length(g_list_length(self->%s));\n", wa->name);
             fprintf( source, "  GList *l_%s;\n", wa->name );
             fprintf( source, "  for(l_%1$s=self->%1$s; l_%1$s; l_%1$s = l_%1$s->next) {\n",
                     wa->name );
-            switch (wa->klass) {
-                case T_TYPE_OBJECT:
-                    fprintf( source, "    %1$s *%2$s = l_%2$s->data;\n",
-                            wa->type, wa->name );
-                    break;
-                case T_TYPE_STRING:
-                    fprintf( source, "    %1$s %2$s = l_%2$s->data;\n",
-                            wa->type, wa->name );
-                    break;
-                default:
-                    fprintf( source, "    %1$s %2$s = *(%1$s *)l_%2$s->data;\n",
-                            wa->type, wa->name );
-            }
-            switch (wa->klass) {
-                case T_TYPE_INT:
-                case T_TYPE_UINT:
-                    fprintf( source, "    len += wain_int_length(%1$s);\n",
-                           wa->name );
-                    break;
-                case T_TYPE_LONG:
-                    fprintf( source, "    len += wain_long_length(%1$s);\n",
-                           wa->name );
-                    break;
-                case T_TYPE_STRING:
-                    fprintf( source, "    len += wain_str_length(%1$s);\n",
-                           wa->name );
-                    break;
-                case T_TYPE_OBJECT:
-                    fprintf( source, "    len += wain_object_length( WAIN_OBJECT(%1$s) );\n",
-                           wa->name );
-                    break;
-            }
+            mk_list_item( source, "    ", wa->klass, wa->type, wa->name);
+            mk_list_item_len( source, "    ", "len", wa->klass, wa->name);
             fprintf( source, "  }\n" );
         }
         else {
-            switch( wa->klass ){
-                case T_TYPE_INT:
-                case T_TYPE_UINT:
-                    fprintf( source, "  len += wain_int_length(self->%1$s);\n",
-                           wa->name );
-                    break;
-                case T_TYPE_LONG:
-                    fprintf( source, "  len += wain_long_length(self->%1$s);\n",
-                           wa->name );
-                    break;
-                case T_TYPE_STRING:
-                    fprintf( source, "  len += wain_str_length(self->%1$s);\n",
-                           wa->name );
-                    break;
-                case T_TYPE_OBJECT:
-                    fprintf( source, "  len += wain_object_length( WAIN_OBJECT(self->%1$s) );\n",
-                           wa->name );
-                    break;
-            }
+            mk_param_len( source, "  ", "len", wa->klass, wa->name );
         }
     }
-    fprintf( source, "return len;\n" );
+    fprintf( source, "  return len;\n" );
     fprintf( source, "}\n" );
     fprintf( source, "\n" );
     
@@ -301,83 +344,36 @@ void tl_class_gen( char *name, int hash, tl_type *res, tl_list *args )
             method_prefix, class_name );
     fprintf( source, "{\n" );
     fprintf( source, "  WainObjectClass *woc = WAIN_OBJECT_GET_CLASS(self);\n" );
-    fprintf( source, "  wain_int_serialize( woc->id, bytes );\nbytes += wain_int_length( woc->id );\n" );
+    fprintf( source, "  wain_int_serialize( woc->id, bytes );\n  bytes += wain_int_length( woc->id );\n" );
 
     for (al = arglist; al; al = al->next) {
         WainArg *wa = al->data;
         if (wa->is_list) {
             /* make Vector */
-            fprintf( source, "  wain_int_serialize( 0x1cb5c415, bytes );\nbytes += wain_int_length(0);\n",
-                    wa->name );
+            fprintf( source, "  wain_int_serialize( %d, bytes );\nbytes += wain_int_length(0);\n",
+                    VECTOR_ID, wa->name );
             fprintf( source, "  wain_int_serialize( g_list_length( self->%s ), bytes );\n",
                     wa->name );
-            fprintf( source, "bytes += wain_int_length( g_list_length( self->%s ) );\n",
+            fprintf( source, "  bytes += wain_int_length( g_list_length( self->%s ) );\n",
                     wa->name );
             fprintf( source, "  GList *l_%s;\n", wa->name );
             fprintf( source, "  for(l_%1$s=self->%1$s; l_%1$s; l_%1$s = l_%1$s->next) {\n",
                     wa->name );
-            switch (wa->klass) {
-                case T_TYPE_OBJECT:
-                    fprintf( source, "    %1$s *%2$s = l_%2$s->data;\n",
-                            wa->type, wa->name );
-                    break;
-                case T_TYPE_STRING:
-                    fprintf( source, "    %1$s %2$s = l_%2$s->data;\n",
-                            wa->type, wa->name );
-                    break;
-                default:
-                    fprintf( source, "    %1$s %2$s = *(%1$s *)l_%2$s->data;\n",
-                            wa->type, wa->name );
-            }
-            switch (wa->klass) {
-                case T_TYPE_INT:
-                case T_TYPE_UINT:
-                    fprintf( source, "    wain_int_serialize( %1$s, bytes );\nbytes += wain_int_length(%1$s);\n",
-                           wa->name );
-                    break;
-                case T_TYPE_LONG:
-                    fprintf( source, "    wain_long_serialize( %1$s, bytes );\nbytes += wain_long_length(%1$s);\n",
-                           wa->name );
-                    break;
-                case T_TYPE_STRING:
-                    fprintf( source, "    wain_str_serialize( %1$s, bytes );\nbytes += wain_str_length(%1$s);\n",
-                           wa->name );
-                    break;
-                case T_TYPE_OBJECT:
-                    fprintf( source, "    wain_object_serialize( WAIN_OBJECT(%1$s), bytes );\nbytes += wain_object_length( WAIN_OBJECT(%1$s) );\n",
-                           wa->name );
-                    break;
-            }
+            mk_list_item( source, "    ", wa->klass, wa->type, wa->name );
+            mk_list_item_ser( source, "    ", "bytes", wa->klass, wa->name );
+            mk_list_item_len( source, "    ", "bytes", wa->klass, wa->name );
             fprintf( source, "  }\n" );
         }
         else {
-            switch( wa->klass ){
-                case T_TYPE_INT:
-                case T_TYPE_UINT:
-                    fprintf( source, "  wain_int_serialize( self->%1$s, bytes );\nbytes += wain_int_length(self->%1$s);\n",
-                           wa->name );
-                    break;
-                case T_TYPE_LONG:
-                    fprintf( source, "  wain_long_serialize( self->%1$s, bytes );\nbytes += wain_long_length(self->%1$s);\n",
-                           wa->name );
-                    break;
-                case T_TYPE_STRING:
-                    fprintf( source, "  wain_str_serialize( self->%1$s, bytes );\nbytes += wain_str_length(self->%1$s);\n",
-                           wa->name );
-                    break;
-                case T_TYPE_OBJECT:
-                    fprintf( source, "  wain_object_serialize( WAIN_OBJECT(self->%1$s), bytes );\nbytes += wain_object_length( WAIN_OBJECT(self->%1$s) );\n",
-                           wa->name );
-                    break;
-            }
+            mk_param_ser( source, "  ", "bytes", wa->klass, wa->name );
+            mk_param_len( source, "  ", "bytes", wa->klass, wa->name );
         }
     }
 
-    fprintf( source, "}\n" );
-    fprintf( source, "\n" );
+    fprintf( source, "}\n\n" );
 
     /* === from_bytes === */
-    fprintf( source, "Wain%s *wain_%s_from_bytes( gchar *bytes ) { return NULL; }\n",
+    fprintf( source, "Wain%s *wain_%s_from_bytes( gchar *bytes ) { return NULL; }\n\n",
             class_name, method_prefix );
 
     fclose(header);
@@ -428,7 +424,7 @@ int main( int argc, char *argv[] )
         fprintf( src, "\n" );
         GList *k, *keys = g_hash_table_get_keys( headers );
         for ( k = keys; k; k = k->next ){
-            fprintf( src, "#include \"%s\"\n", k->data );
+            fprintf( src, "#include \"%s\"\n", (gchar *)k->data );
         }
         g_list_free(keys);
         fprintf( src, "\n#endif\n" );
@@ -439,7 +435,7 @@ int main( int argc, char *argv[] )
         
         keys = g_hash_table_get_keys( sources );
         for ( k = keys; k; k = k->next ){
-            fprintf( src, "#include \"%s\"\n", k->data );
+            fprintf( src, "#include \"%s\"\n", (gchar *)k->data );
         }
         fclose(src);
     }

@@ -8,6 +8,9 @@
 #define __ALIGN_MASK(x,mask) (((x)+(mask))&~(mask))
 #endif
 
+#define BOOL_TRUE_ID  0x997275b5
+#define BOOL_FALSE_ID 0xbc799737
+
 G_DEFINE_TYPE(WainObject, wain_object, G_TYPE_OBJECT);
 
 /* === Object === */
@@ -72,6 +75,29 @@ void wain_long_serialize( gint64 l, gchar *bytes )
 gint64 wain_long_from_bytes( gchar *bytes )
 {
     return le64toh(*(guint64 *)bytes);
+}
+
+/* === double === */
+void wain_double_serialize( gdouble d, gchar *bytes )
+{
+    *(gdouble *)bytes = d;
+}
+
+gdouble wain_double_from_bytes( gchar *bytes )
+{
+    return (*(gdouble *)bytes);
+}
+
+/* === bool === */
+void wain_bool_serialize( gboolean b, gchar *bytes )
+{
+    *(gint32 *)bytes = b ? BOOL_TRUE_ID : BOOL_FALSE_ID;
+}
+
+gboolean wain_bool_from_bytes( gchar *bytes )
+{
+    gint32 id = *(gint32 *)bytes;
+    return (id == BOOL_TRUE_ID);
 }
 
 /* === str === */
