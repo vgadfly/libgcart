@@ -39,6 +39,8 @@ struct _WainArg {
     gchar *name;
     enum wain_type klass;
     int is_list;
+    gchar *cond_field;
+    int cond_bits;
 };
 
 #define VECTOR_ID 0x1cb5c415
@@ -124,6 +126,15 @@ static GList *wain_args_from_tl( tl_list *args )
         wa->type = type_name;
         wa->klass = klass;
         wa->is_list = is_list;
+
+        if ( arg->modifiers & ARG_MOD_COND ) {
+            printf( "contitional %s: %s & %d\n", wa->name, arg->cond_field, arg->cond_bitmask );
+            wa->cond_field = arg->cond_field;
+            wa->cond_bits = arg->cond_bitmask;
+        }
+        else {
+            wa->cond_field = NULL;
+        }
         res = g_list_append( res, wa );
     }
     return res;
@@ -317,22 +328,34 @@ void tl_class_gen( char *name, int hash, tl_type *res, tl_list *args )
     fprintf( source, "  WainObjectClass *woc = WAIN_OBJECT_GET_CLASS(self);\n" );
     fprintf( source, "  len += wain_int_length( woc->id );\n" );
     
+    int indent;
+    static const char *indent_val[] = {"", "  ", "    ", "      ", "        "};
+
     for (al = arglist; al; al = al->next) {
+        indent = 1;
         WainArg *wa = al->data;
+        if (wa->cond_field) {
+            fprintf( source, "  if ( self->%s & %d ) {\n", wa->cond_field, wa->cond_bits );
+            indent++;
+        }
         if (wa->is_list) {
             /* make Vector */
-            fprintf( source, "  len += wain_int_length(%d);\n", VECTOR_ID);
-            fprintf( source, "  len += wain_int_length(g_list_length(self->%s));\n", wa->name);
-            fprintf( source, "  GList *l_%s;\n", wa->name );
-            fprintf( source, "  for(l_%1$s=self->%1$s; l_%1$s; l_%1$s = l_%1$s->next) {\n",
-                    wa->name );
-            mk_list_item( source, "    ", wa->klass, wa->type, wa->name);
-            mk_list_item_len( source, "    ", "len", wa->klass, wa->name);
-            fprintf( source, "  }\n" );
+            fprintf( source, "%slen += wain_int_length(%d);\n", indent_val[indent], VECTOR_ID);
+            fprintf( source, "%slen += wain_int_length(g_list_length(self->%s));\n", indent_val[indent], wa->name);
+            fprintf( source, "%sGList *l_%s;\n", indent_val[indent], wa->name );
+            fprintf( source, "%1$sfor(l_%2$s=self->%2$s; l_%2$s; l_%2$s = l_%2$s->next) {\n",
+                    indent_val[indent], wa->name );
+            indent++;
+            mk_list_item( source, indent_val[indent], wa->klass, wa->type, wa->name);
+            mk_list_item_len( source, indent_val[indent], "len", wa->klass, wa->name);
+            indent--;
+            fprintf( source, "%s}\n", indent_val[indent] );
         }
         else {
-            mk_param_len( source, "  ", "len", wa->klass, wa->name );
+            mk_param_len( source, indent_val[indent], "len", wa->klass, wa->name );
         }
+        if (wa->cond_field)
+            fprintf( source, "  }\n" );
     }
     fprintf( source, "  return len;\n" );
     fprintf( source, "}\n" );
@@ -348,26 +371,35 @@ void tl_class_gen( char *name, int hash, tl_type *res, tl_list *args )
 
     for (al = arglist; al; al = al->next) {
         WainArg *wa = al->data;
+        indent = 1;
+        if (wa->cond_field) {
+            fprintf( source, "  if ( self->%s & %d ) {\n", wa->cond_field, wa->cond_bits );
+            indent++;
+        }
         if (wa->is_list) {
             /* make Vector */
-            fprintf( source, "  wain_int_serialize( %d, bytes );\nbytes += wain_int_length(0);\n",
-                    VECTOR_ID, wa->name );
-            fprintf( source, "  wain_int_serialize( g_list_length( self->%s ), bytes );\n",
-                    wa->name );
-            fprintf( source, "  bytes += wain_int_length( g_list_length( self->%s ) );\n",
-                    wa->name );
-            fprintf( source, "  GList *l_%s;\n", wa->name );
-            fprintf( source, "  for(l_%1$s=self->%1$s; l_%1$s; l_%1$s = l_%1$s->next) {\n",
-                    wa->name );
-            mk_list_item( source, "    ", wa->klass, wa->type, wa->name );
-            mk_list_item_ser( source, "    ", "bytes", wa->klass, wa->name );
-            mk_list_item_len( source, "    ", "bytes", wa->klass, wa->name );
-            fprintf( source, "  }\n" );
+            fprintf( source, "%1$swain_int_serialize( %2$d, bytes );\n%1$sbytes += wain_int_length( %2$d );\n",
+                    indent_val[indent], VECTOR_ID );
+            fprintf( source, "%swain_int_serialize( g_list_length( self->%s ), bytes );\n",
+                    indent_val[indent], wa->name );
+            fprintf( source, "%sbytes += wain_int_length( g_list_length( self->%s ) );\n",
+                    indent_val[indent], wa->name );
+            fprintf( source, "%sGList *l_%s;\n", indent_val[indent], wa->name );
+            fprintf( source, "%1$sfor(l_%2$s=self->%2$s; l_%2$s; l_%2$s = l_%2$s->next) {\n",
+                    indent_val[indent], wa->name );
+            indent++;
+            mk_list_item( source, indent_val[indent], wa->klass, wa->type, wa->name );
+            mk_list_item_ser( source, indent_val[indent], "bytes", wa->klass, wa->name );
+            mk_list_item_len( source, indent_val[indent], "bytes", wa->klass, wa->name );
+            indent--;
+            fprintf( source, "%s}\n", indent_val[indent] );
         }
         else {
-            mk_param_ser( source, "  ", "bytes", wa->klass, wa->name );
-            mk_param_len( source, "  ", "bytes", wa->klass, wa->name );
+            mk_param_ser( source, indent_val[indent], "bytes", wa->klass, wa->name );
+            mk_param_len( source, indent_val[indent], "bytes", wa->klass, wa->name );
         }
+        if (wa->cond_field)
+            fprintf( source, "  }\n" );
     }
 
     fprintf( source, "}\n\n" );

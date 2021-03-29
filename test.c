@@ -76,5 +76,8 @@ int main( int argc, char *argv[] )
     
     g_free(bytes);
 
+    WainFour *four = g_object_new( WAIN_TYPE_FOUR, NULL );
+
+
     return 0;
 }
