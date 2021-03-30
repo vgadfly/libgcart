@@ -27,9 +27,6 @@ struct _WainObjectClass
     /** serialize object */
     void (*serialize)( WainObject *, gchar * );
 
-    /** deserialize object */
-    WainObject *(*from_bytes)( gchar * );
-    
     gpointer reserved[8];
 };
 

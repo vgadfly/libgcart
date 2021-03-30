@@ -18,7 +18,6 @@ static void wain_object_class_init( WainObjectClass *klass )
 {
     klass->serialize = NULL;
     klass->length = NULL;
-    klass->from_bytes = NULL;
     klass->tl_name = NULL;
 }
 
@@ -156,6 +155,23 @@ void wain_str_serialize( gchar *s, gchar *bytes )
 
 gchar *wain_str_from_bytes( gchar *bytes )
 {
-    return NULL;
+    guint32 len;
+    gchar *str;
+
+    guint32 val = le32toh(*(guint32 *)bytes);
+
+    if (val & 0xff == 254) {
+        len = val >> 8;
+        bytes += 4;
+    }
+    else {
+        len = val & 0xff;
+        bytes += 1;
+    }
+    str = g_malloc(len+1);
+    memcpy( str, bytes, len );
+    str[len] = 0;
+
+    return str;
 }
 

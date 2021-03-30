@@ -10,6 +10,7 @@
 
 static GHashTable *headers;
 static GHashTable *sources;
+static GHashTable *constructors;
 static GList *functions;
 static GList *types;
 
@@ -33,10 +34,22 @@ const char *wain_type_names[] = {
     "object"
 };
 
+const char *wain_prop_types[] = {
+    "int",
+    "uint64",
+    "uint",
+    "string",
+    "double",
+    "boolean",
+    "object"
+};
+
+
 typedef struct _WainArg WainArg;
 struct _WainArg {
     gchar *type;
     gchar *name;
+    gchar *uc_name;
     enum wain_type klass;
     int is_list;
     gchar *cond_field;
@@ -120,9 +133,11 @@ static GList *wain_args_from_tl( tl_list *args )
         tl_arg *arg = args->data;
         gchar *type_name = wain_type_from_tl( arg->type, &is_list, &klass );
         gchar *var_name = wain_var_from_tl( arg->name, i );
+        gchar *uc_name = g_ascii_strup( arg->name, -1 );
 
         WainArg *wa = g_new(WainArg, 1);
         wa->name = var_name;
+        wa->uc_name = uc_name;
         wa->type = type_name;
         wa->klass = klass;
         wa->is_list = is_list;
@@ -267,7 +282,8 @@ void tl_class_gen( char *name, int hash, tl_type *res, tl_list *args )
         if (!g_strcmp0( class_name, gen_blacklist[i] ))
             goto _free;
     }
-    
+   
+    g_hash_table_insert( constructors, GINT_TO_POINTER(hash), g_strdup(method_prefix) );
     if (!g_hash_table_contains( headers, header_name->str ))
         g_hash_table_insert( headers, g_strdup( header_name->str ), NULL );
     if (!g_hash_table_contains( sources, source_name->str ))
@@ -278,35 +294,45 @@ void tl_class_gen( char *name, int hash, tl_type *res, tl_list *args )
     /* === header === */
 
     fprintf( header, "#define WAIN_TYPE_%s wain_%s_get_type()\n", macro_name, method_prefix );
-    fprintf( header, "G_DECLARE_FINAL_TYPE (Wain%s, wain_%s, WAIN, %s, WainObject)\n",
+    fprintf( header, "G_DECLARE_FINAL_TYPE (Wain%s, wain_%s, WAIN, %s, WainObject)\n\n",
             class_name, method_prefix, macro_name );
-    fprintf( header, "\n" );
+     
     fprintf( header, "typedef struct _Wain%s Wain%s;\n", class_name, class_name );
     fprintf( header, "struct _Wain%s {\n", class_name );
-    fprintf( header, "  WainObject parent_instance;\n" );
-
+    fprintf( header, "  WainObject parent;\n" );
+ 
     GList *arglist = wain_args_from_tl( args );
     GList *al;
+    
     for (al = arglist; al; al = al->next) {
         WainArg *wa = al->data;
         if (wa->is_list)
-            fprintf( header, "  GList * /* <%s> */ %s;\n", wa->type, wa->name );
+            fprintf( header, "  GList * /" "* <%s> *" "/ %s;\n", wa->type, wa->name );
         else
             fprintf( header, "  %s %s%s;\n", 
                     wa->type, wa->klass == T_TYPE_OBJECT ? "*" : "", wa->name );
     }
 
-    fprintf( header, "};\n" );
-    fprintf( header, "\n" );
-    fprintf( header, "gint32 wain_%s_length( Wain%s * );\n", method_prefix, class_name );
-    fprintf( header, "void wain_%s_serialize( Wain%s *, gchar * );\n", method_prefix, class_name );
+    fprintf( header, "};\n\n" );
     fprintf( header, "Wain%s *wain_%s_from_bytes( gchar * );\n", class_name, method_prefix );
-    fprintf( header, "\n" );
-
+    
     /* === source === */
-
-    fprintf( source, "G_DEFINE_TYPE(Wain%s, wain_%s, WAIN_TYPE_OBJECT)\n", class_name, method_prefix );
+    
+    fprintf( source, "G_DEFINE_TYPE(Wain%s, wain_%s, WAIN_TYPE_OBJECT)\n\n", class_name, method_prefix );
+    /*
+    fprintf( source, "enum {\n" );
+    fprintf( source, "  PROP_RESERVED,\n" );
+    for (al = arglist; al; al = al->next) {
+        WainArg *wa = al->data;
+        fprintf( source, "  PROP_%s,\n" );
+    }
+    fprintf( source, "  N_PROPS\n}\n\n" );
+    fprintf( source, "static GParamSpec *obj_props[N_PROPS] = { NULL };\n" );
+    */
+    fprintf( source, "static gint32 wain_%s_length( Wain%s * );\n", method_prefix, class_name );
+    fprintf( source, "static void wain_%s_serialize( Wain%s *, gchar * );\n", method_prefix, class_name );
     fprintf( source, "\n" );
+
     fprintf( source, "static void wain_%s_init( Wain%s *obj ) {  }\n\n",
             method_prefix, class_name );
 
@@ -317,15 +343,21 @@ void tl_class_gen( char *name, int hash, tl_type *res, tl_list *args )
     fprintf( source, "  klass->parent_class.tl_name = \"%s\";\n", res->name );
     fprintf( source, "  klass->parent_class.serialize = wain_%s_serialize;\n", method_prefix );
     fprintf( source, "  klass->parent_class.length = wain_%s_length;\n", method_prefix );
-    fprintf( source, "  klass->parent_class.from_bytes = wain_%s_from_bytes;\n", method_prefix );
+    /*
+    for (al = arglist; al; al = al->next) {
+        WainArg *wa = al->data;
+        fprintf( source, "  obj_props[PROP_%s] = \n", wa->uc_name );
+    }
+    */
     fprintf( source, "}\n\n" );
-
-    
+ 
     /* === length === */
 
     fprintf( source, "gint32 wain_%s_length( Wain%s *self )\n", 
             method_prefix, class_name );
-    fprintf( source, "{\n  gint32 len = 0;\n" );
+    fprintf( source, "{\n" );
+    fprintf( source, "  g_return_val_if_fail( WAIN_IS_%s(self), 0 );\n", macro_name );
+    fprintf( source, "  gint32 len = 0;\n" );
     fprintf( source, "  WainObjectClass *woc = WAIN_OBJECT_GET_CLASS(self);\n" );
     fprintf( source, "  len += wain_int_length( woc->id );\n" );
     
@@ -367,6 +399,7 @@ void tl_class_gen( char *name, int hash, tl_type *res, tl_list *args )
     fprintf( source, "void wain_%s_serialize( Wain%s *self, gchar *bytes )\n", 
             method_prefix, class_name );
     fprintf( source, "{\n" );
+    fprintf( source, "  g_return_if_fail( WAIN_IS_%s(self) );\n", macro_name );
     fprintf( source, "  WainObjectClass *woc = WAIN_OBJECT_GET_CLASS(self);\n" );
     fprintf( source, "  wain_int_serialize( woc->id, bytes );\n  bytes += wain_int_length( woc->id );\n" );
 
@@ -442,9 +475,13 @@ int main( int argc, char *argv[] )
         else
             yyin = fopen(argv[1], "r");
     }
+
     sources = g_hash_table_new( g_str_hash, g_str_equal );
     headers = g_hash_table_new( g_str_hash, g_str_equal );
+    constructors = g_hash_table_new( g_direct_hash, g_direct_equal );
+
     yyparse();
+
     if (headers && sources){
         FILE *src = fopen( "auto.h", "w" );
 
@@ -468,6 +505,23 @@ int main( int argc, char *argv[] )
         for ( k = keys; k; k = k->next ){
             fprintf( src, "#include \"%s\"\n", (gchar *)k->data );
         }
+
+        fprintf( src, "\nWainObject *wain_object_from_bytes( gchar *bytes )\n{\n" );
+        fprintf( src, "  guint32 id = *(guint32 *)bytes;\n" );
+        fprintf( src, "  bytes += 4;\n" );
+        fprintf( src, "  switch (id) {\n" );
+
+        GHashTableIter i;
+        g_hash_table_iter_init( &i, constructors );
+        gpointer hash, method;
+        while ( g_hash_table_iter_next( &i, &hash, &method ) ) {
+            fprintf( src, "  case 0x%x:\n", GPOINTER_TO_INT(hash) );
+            fprintf( src, "    return wain_%s_from_bytes(bytes);\n    break;\n", method ); 
+        }
+        fprintf( src, "  default:\n" );
+        fprintf( src, "    /" "* alert() *""/;\n" );
+        fprintf( src, "  }\n}\n" );
+
         fclose(src);
     }
 
