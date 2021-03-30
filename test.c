@@ -14,16 +14,17 @@ int main( int argc, char *argv[] )
     int i;
 
     WainOne *one = g_object_new( WAIN_TYPE_ONE, NULL );
+    printf ("one is %s\n", wain_object_tl_name(WAIN_OBJECT(one)) );
     one->i = 0x33;
     one->s = "lolkek";
     one->d = 0.1;
     one->l = -1;
     one->b = TRUE;
     
-    len =  wain_object_length( one );
+    len =  wain_object_length( WAIN_OBJECT(one) );
     printf( "One serialized len is %u\n", len );
     bytes = g_malloc(len);
-    wain_object_serialize( one, bytes );
+    wain_object_serialize( WAIN_OBJECT(one), bytes );
     
     for ( i = 0; i < len; i+=4 )
         printf("%08X.", *(guint32*)(bytes+i));
@@ -32,12 +33,13 @@ int main( int argc, char *argv[] )
     g_free(bytes);
 
     WainTwo *two = g_object_new( WAIN_TYPE_TWO, NULL );
+    printf ("two is %s\n", wain_object_tl_name(WAIN_OBJECT(two)) );
     two->t1 = one;
     two->t2 = one;
-    len =  wain_object_length( two );
+    len =  wain_object_length( WAIN_OBJECT(two) );
     printf( "Two serialized len is %u\n", len );
     bytes = g_malloc(len);
-    wain_object_serialize( two, bytes );
+    wain_object_serialize( WAIN_OBJECT(two), bytes );
     
     for ( i = 0; i < len; i+=4 )
         printf("%08X.", *(guint32*)(bytes+i));
@@ -46,6 +48,7 @@ int main( int argc, char *argv[] )
     g_free(bytes);
 
     WainThree *three = g_object_new( WAIN_TYPE_THREE, NULL );
+    printf ("three is %s\n", wain_object_tl_name(WAIN_OBJECT(three)) );
     GList *list = NULL;
     gint32 *pi = g_new(gint32, 1);
     *pi = 1;
@@ -65,10 +68,10 @@ int main( int argc, char *argv[] )
     list = g_list_append( list, "s_two" );
     three->vs = list;
     
-    len = wain_object_length( three );
+    len = wain_object_length( WAIN_OBJECT(three) );
     printf("Three serialized len is %d\n", len);
     bytes = g_malloc(len);
-    wain_object_serialize( three, bytes );
+    wain_object_serialize( WAIN_OBJECT(three), bytes );
     
     for ( i = 0; i < len; i+=4 )
         printf("%08X.", *(guint32*)(bytes+i));
@@ -76,8 +79,8 @@ int main( int argc, char *argv[] )
     
     g_free(bytes);
 
-    WainFour *four = g_object_new( WAIN_TYPE_FOUR, NULL );
-
+    WainTestFour *four = g_object_new( WAIN_TYPE_TEST_FOUR, NULL );
+    printf ("four is %s\n", wain_object_tl_name(WAIN_OBJECT(four)) );
 
     return 0;
 }

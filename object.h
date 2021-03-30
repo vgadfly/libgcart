@@ -18,6 +18,9 @@ struct _WainObjectClass
     /** TL constructor hash id */
     guint32 id;
 
+    /** TL type name */
+    const gchar *tl_name;
+
     /** serialized length of the object */
     gint32 (*length)( WainObject * );
 
@@ -30,6 +33,7 @@ struct _WainObjectClass
     gpointer reserved[8];
 };
 
+const gchar *wain_object_tl_name( WainObject * );
 gint32 wain_object_length( WainObject * );
 void wain_object_serialize( WainObject *, gchar * );
 WainObject *wain_object_from_bytes( gchar * );

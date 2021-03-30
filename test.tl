@@ -10,4 +10,4 @@ two#1337f001 t1: One t2: One = Two;
 three#c001babe vo: Vector<Two> vi: Vector<int> vs: Vector<string> = Three;
 
 // flags
-four#55aa33cc flags: # i: flags.0?int s: flags.1?Vector<bytes> = Four;
+test.four#55aa33cc flags: # i: flags.0?int s: flags.1?Vector<bytes> = test.Four;

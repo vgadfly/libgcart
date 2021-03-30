@@ -19,6 +19,7 @@ static void wain_object_class_init( WainObjectClass *klass )
     klass->serialize = NULL;
     klass->length = NULL;
     klass->from_bytes = NULL;
+    klass->tl_name = NULL;
 }
 
 static void wain_object_init( WainObject *obj )
@@ -28,6 +29,12 @@ static void wain_object_init( WainObject *obj )
 GObject *wain_object_new(void)
 {
     return g_object_new( WAIN_TYPE_OBJECT, 0 );
+}
+
+const gchar *wain_object_tl_name( WainObject *obj )
+{
+    WainObjectClass *woc = WAIN_OBJECT_GET_CLASS(obj);
+    return woc->tl_name; 
 }
 
 gint32 wain_object_length( WainObject *obj )

@@ -314,6 +314,7 @@ void tl_class_gen( char *name, int hash, tl_type *res, tl_list *args )
             method_prefix, class_name );
     fprintf( source, "{\n" );
     fprintf( source, "  klass->parent_class.id = 0x%x;\n", hash );
+    fprintf( source, "  klass->parent_class.tl_name = \"%s\";\n", res->name );
     fprintf( source, "  klass->parent_class.serialize = wain_%s_serialize;\n", method_prefix );
     fprintf( source, "  klass->parent_class.length = wain_%s_length;\n", method_prefix );
     fprintf( source, "  klass->parent_class.from_bytes = wain_%s_from_bytes;\n", method_prefix );
@@ -448,12 +449,10 @@ int main( int argc, char *argv[] )
         FILE *src = fopen( "auto.h", "w" );
 
         fprintf( src, "#ifndef __WAIN_AUTO_H__\n" );
-        fprintf( src, "#define __WAIN_AUTO_H__\n" );
+        fprintf( src, "#define __WAIN_AUTO_H__\n\n" );
         fprintf( src, "#include <glib-object.h>\n" );
-        fprintf( src, "#include <glib.h>\n" );
-        fprintf( src, "\n" );
-        fprintf( src, "#include \"object.h\"\n" );
-        fprintf( src, "\n" );
+        fprintf( src, "#include <glib.h>\n\n" );
+        fprintf( src, "#include \"object.h\"\n\n" );
         GList *k, *keys = g_hash_table_get_keys( headers );
         for ( k = keys; k; k = k->next ){
             fprintf( src, "#include \"%s\"\n", (gchar *)k->data );
