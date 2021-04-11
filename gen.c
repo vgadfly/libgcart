@@ -439,8 +439,8 @@ void tl_class_gen( char *name, int hash, tl_type *res, tl_list *args )
     fprintf( source, "}\n\n" );
 
     /* === from_bytes === */
-    fprintf( source, "Wain%s *wain_%s_from_bytes( gchar *bytes ) { return NULL; }\n\n",
-            class_name, method_prefix );
+    fprintf( source, "Wain%s *wain_%s_from_bytes( gchar *bytes ) { return g_object_new(WAIN_TYPE_%s, NULL); }\n\n",
+            class_name, method_prefix, macro_name );
 
     fclose(header);
     fclose(source);
@@ -519,7 +519,7 @@ int main( int argc, char *argv[] )
             fprintf( src, "    return wain_%s_from_bytes(bytes);\n    break;\n", method ); 
         }
         fprintf( src, "  default:\n" );
-        fprintf( src, "    /" "* alert() *""/;\n" );
+        fprintf( src, "    return NULL;\n" );
         fprintf( src, "  }\n}\n" );
 
         fclose(src);
